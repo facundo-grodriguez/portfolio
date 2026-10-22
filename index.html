@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=20261022b">
+  <link rel="stylesheet" href="css/styles.css?v=20261022c">
   <script>
     // Tema antes de pintar la página, para que no parpadee: el elegido o, si no hay, el del sistema.
     (function () {
@@ -65,7 +65,7 @@
         </div>
         <p class="lead">Desarrollé un bot de Telegram para reemplazar las planillas, los mensajes sueltos y la memoria en la administración de alquileres. Lo usa una sola persona, el administrador.</p>
         <p class="status">Está en producción, con datos reales. Me falta cargar la clave de la API de IPC para la actualización automática.</p>
-        <div class="chat-demo" id="chat-demo">
+        <div class="chat-demo" data-demo="alquileres">
           <div class="cd-phone" aria-hidden="true">
             <div class="cd-head"><span class="cd-av">A</span><div><b>Administrador de alquileres</b><small>bot · datos de ejemplo</small></div></div>
             <div class="cd-chat">
@@ -87,9 +87,9 @@ Mitre 450 · Octubre 2026 · $ 320.000</div>
         <details>
           <summary>Ver detalle</summary>
           <dl>
-            <dt>Qué centraliza</dt>
+            <dt>Qué resuelve</dt>
             <dd>Personas (inquilinos, propietarios, garantes), propiedades, contratos, pagos, gastos (expensas, ABL, ARBA, servicios, seguros) y un balance que se arma solo. Manda un resumen diario de qué cobrar y qué vence, y calcula la actualización por IPC siempre sobre el monto y la fecha originales del contrato.</dd>
-            <dt>Dos caminos</dt>
+            <dt>Cómo está armado</dt>
             <dd>Los flujos guiados con botones son una máquina de estados, sin IA. El texto libre lo interpreta OpenAI con function calling y 19 herramientas. El modelo solo interpreta el lenguaje; la lógica y los datos viven en el código y en Postgres, y hay reglas para que no se filtren IDs internos ni errores de SQL.</dd>
             <dt>Stack completo</dt>
             <dd>TypeScript sobre Node 22+, grammY (webhook en Render, 24/7), PostgreSQL en Supabase con Drizzle y drizzle-kit, node-cron, zod, Vitest, Biome. IPC desde la API de RapidAPI.</dd>
@@ -107,31 +107,38 @@ Mitre 450 · Octubre 2026 · $ 320.000</div>
         </div>
         <p class="lead">Desarrollé un sistema que genera el recibo de sueldo en el nuevo formato Anexo III a partir de liquidaciones ya calculadas.</p>
         <p class="status">Un estudio contable lo usa en un piloto real: un solo cliente, con datos reales. Pasó una etapa de QA funcional con veredicto favorable. Todavía no es un producto con varios clientes.</p>
-        <div class="shots">
-          <figure style="--ar:1.111">
-            <a href="img/recibos/vista-previa-importacion.png"><img src="img/recibos/vista-previa-importacion.png" alt="Vista previa de una importación: conceptos por empleado con estado de validación" loading="lazy" width="1425" height="1283"></a>
-            <figcaption>Vista previa de la importación. Los totales están en $0 hasta clasificar los conceptos. Datos de ejemplo.</figcaption>
-          </figure>
-          <figure style="--ar:0.917">
-            <a href="img/recibos/recibo-anexo-iii.png"><img src="img/recibos/recibo-anexo-iii.png" alt="Recibo de sueldo en formato Anexo III generado en PDF" loading="lazy" width="792" height="864"></a>
-            <figcaption>PDF final en formato Anexo III. Datos de ejemplo.</figcaption>
-          </figure>
+        <div class="chat-demo" data-demo="recibos">
+          <div class="cd-phone cd-window" aria-hidden="true">
+            <div class="cd-head"><span class="cd-av">R</span><div><b>Recibos · Anexo III</b><small>sistema web · datos de ejemplo</small></div></div>
+            <div class="cd-chat">
+              <div class="cd-tag">Emitir el PDF</div>
+              <div class="cd-m cd-me">Emitir recibos</div>
+              <div class="cd-m cd-bot">📄 3 recibos Anexo III emitidos
+Una hoja A4 cada uno, guardados sin cambios posibles<div class="cd-btns"><span class="picked">Descargar ZIP</span></div></div>
+            </div>
+            <div class="cd-menu"><span>📥 Importaciones</span><span>🏷️ Conceptos</span><span>👥 Empleados</span><span>📄 Recibos</span></div>
+          </div>
+          <ol class="cd-notes">
+            <li data-scene="0"><b>Importar y revisar</b>Sube el Excel de la liquidación ya calculada y muestra fila por fila qué está bien y qué no. Nada se guarda hasta confirmar.</li>
+            <li data-scene="1"><b>Clasificar y validar</b>Cada concepto se clasifica una sola vez por empresa. Bloquea lo que impide emitir y advierte variaciones raras.</li>
+            <li data-scene="2"><b>Emitir el PDF</b>Genera en lote el recibo en formato Anexo III, una hoja A4 por empleado, y lo guarda tal cual se emitió.</li>
+          </ol>
         </div>
         <p class="stackline">TypeScript · Node.js · PostgreSQL · Prisma · Puppeteer · Docker</p>
         <details>
           <summary>Ver detalle</summary>
           <dl>
-            <dt>Problema</dt>
-            <dd>Un cambio normativo exige un nuevo formato de recibo.</dd>
-            <dt>Solución</dt>
-            <dd>No recalcula sueldos ni reemplaza a un sistema de liquidación. Toma la liquidación que la empresa ya calculó (Excel), valida la estructura, mapea columnas y conceptos, identifica empleados y períodos, muestra una vista previa con validaciones de consistencia y emite el PDF final. Guarda un snapshot de cada recibo emitido para tener trazabilidad.</dd>
-            <dt>Detalle técnico</dt>
-            <dd>El recibo se renderiza como HTML/CSS y se convierte a PDF con Chromium headless (Puppeteer), con un pool acotado de instancias para no agotar la RAM al emitir en lote.</dd>
+            <dt>Qué resuelve</dt>
+            <dd>Un cambio normativo exige un nuevo formato de recibo. El sistema no recalcula sueldos ni reemplaza a un sistema de liquidación. Toma la liquidación que la empresa ya calculó (Excel), valida la estructura, mapea columnas y conceptos, identifica empleados y períodos, muestra una vista previa con validaciones de consistencia y emite el PDF final. Guarda un snapshot de cada recibo emitido para tener trazabilidad.</dd>
+            <dt>Cómo está armado</dt>
+            <dd>El recibo se renderiza como HTML/CSS y se convierte a PDF con Chromium headless (Puppeteer), con un pool acotado de instancias para no agotar la RAM al emitir en lote. Un recibo emitido nunca se edita: si hay un error se anula con motivo y se reemite, y queda el historial.</dd>
+            <dt>Stack completo</dt>
+            <dd>Backend en NestJS (TypeScript) con módulos separados por etapa, frontend en React + Vite, PostgreSQL con Prisma, Puppeteer para los PDF y Docker Compose con Caddy para HTTPS automático.</dd>
             <dt>Próximos pasos</dt>
             <dd>Comparación entre períodos, detección de anomalías con IA y un asistente sobre variaciones salariales.</dd>
           </dl>
         </details>
-        <p><a class="repo" href="https://github.com/facundo-grodriguez/recibos-de-sueldo" target="_blank" rel="noopener noreferrer">Ver código →</a></p>
+        <p><a class="repo" href="https://github.com/facundo-grodriguez/recibos-de-sueldo" target="_blank" rel="noopener noreferrer">Ver código →</a> &nbsp;·&nbsp; <a class="repo" href="recibos.html">Ver cómo funciona →</a></p>
       </article>
 
       <article class="project project--lab" id="panel-whatsapp" role="tabpanel" aria-labelledby="tab-whatsapp">
@@ -141,30 +148,36 @@ Mitre 450 · Octubre 2026 · $ 320.000</div>
         </div>
         <p class="lead">Desarrollé un asistente de WhatsApp que responde preguntas frecuentes de un negocio y deriva a un vendedor cuando detecta intención de compra.</p>
         <p class="status">Es un proyecto personal, sin cliente real todavía. Las métricas del dashboard son de prueba.</p>
-        <div class="shots shots-single">
-          <figure style="--ar:0.8">
-            <a href="img/whatsapp-bot/dashboard.jpg"><img src="img/whatsapp-bot/dashboard.jpg" alt="Dashboard del bot: conversaciones pendientes de revisión y métricas generales" loading="lazy" width="480" height="868"></a>
-            <figcaption>Dashboard con datos de prueba. Clic para ver la captura completa.</figcaption>
-          </figure>
-          <ul class="shots-notes">
-            <li>Conversaciones pendientes de revisión, con la antigüedad, el mensaje del cliente y la categoría detectada.</li>
-            <li>Totales arriba: conversaciones, pendientes por responder y resueltas manualmente.</li>
-            <li>Acciones por conversación: abrir el chat, reactivar el bot o marcarla como atendida.</li>
-          </ul>
+        <div class="chat-demo" data-demo="whatsapp">
+          <div class="cd-phone" aria-hidden="true">
+            <div class="cd-head"><span class="cd-av">P</span><div><b>PrintLab 3D</b><small>WhatsApp · datos de ejemplo</small></div></div>
+            <div class="cd-chat">
+              <div class="cd-tag">Preguntas frecuentes · sin IA</div>
+              <div class="cd-m cd-me">Hola! ¿a qué hora abren?</div>
+              <div class="cd-m cd-bot">Trabajamos de lunes a viernes de 10 a 19hs, y sábados de 10 a 14hs.</div>
+            </div>
+          </div>
+          <ol class="cd-notes">
+            <li data-scene="0"><b>Preguntas frecuentes, sin IA</b>Un motor de reglas compara palabras clave y responde con una de varias variantes, para no sonar repetido.</li>
+            <li data-scene="1"><b>Intención de compra</b>Si el cliente quiere cotizar o comprar, el bot deja de autoresponder y la conversación pasa a una persona.</li>
+            <li data-scene="2"><b>Dashboard del equipo</b>Lo que el bot no supo responder y los clientes derivados quedan en una cola para marcar como atendidos o reactivar el bot.</li>
+          </ol>
         </div>
         <p class="stackline">Node.js · TypeScript · Fastify · SQLite · Drizzle · API de WhatsApp Business (Meta)</p>
         <details>
           <summary>Ver detalle</summary>
           <dl>
-            <dt>Qué hace</dt>
+            <dt>Qué resuelve</dt>
             <dd>Recibe los mensajes por la API oficial de WhatsApp Business de Meta (migré desde WAHA). Un motor de reglas responde las FAQs cargadas. Si detecta intención de compra, deja de autoresponder y pasa la conversación a una persona. Un dashboard muestra las conversaciones pendientes (las derivadas arriba), métricas de uso y el chat.</dd>
             <dt>Cómo está armado</dt>
             <dd>Dos interfaces, <code>ResponseEngine</code> y <code>MessagingProvider</code>, permiten cambiar el motor de respuestas o el canal sin reescribir el resto. Hay una IA implementada como fallback, restringida a las FAQs, apagada por defecto.</dd>
             <dt>Stack completo</dt>
             <dd>Node.js, TypeScript, Fastify, SQLite con Drizzle ORM, p-queue.</dd>
+            <dt>Próximos pasos</dt>
+            <dd>Avisarle al vendedor por un canal propio (hoy la derivación queda en el dashboard) y cargar las preguntas de un negocio real.</dd>
           </dl>
         </details>
-        <p><a class="repo" href="https://github.com/facundo-grodriguez/whatsapp-bot" target="_blank" rel="noopener noreferrer">Ver código →</a></p>
+        <p><a class="repo" href="https://github.com/facundo-grodriguez/whatsapp-bot" target="_blank" rel="noopener noreferrer">Ver código →</a> &nbsp;·&nbsp; <a class="repo" href="whatsapp-bot.html">Ver cómo funciona →</a></p>
       </article>
       </div>
     </section>
@@ -222,6 +235,6 @@ Mitre 450 · Octubre 2026 · $ 320.000</div>
   <button type="button" class="to-top" aria-label="Volver arriba" hidden>
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 16V4M4 9l6-6 6 6"/></svg>
   </button>
-  <script src="js/main.js?v=20261022b"></script>
+  <script src="js/main.js?v=20261022c"></script>
 </body>
 </html>

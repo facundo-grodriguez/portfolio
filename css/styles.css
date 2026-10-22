@@ -351,7 +351,7 @@ code {
 .shots-notes li { margin-bottom: 10px; }
 .shots-notes li::marker { color: var(--accent-ink); }
 
-/* Chat animado del bot de alquileres: un teléfono que se escribe solo y notas que marcan cada escena */
+/* Demos animadas de los proyectos: un teléfono (o una ventana) que se escribe solo y notas que marcan cada escena. Toman el color de su tarjeta. */
 .chat-demo { display: flex; gap: 28px; align-items: center; margin: 4px 0 16px; }
 .cd-phone {
   flex: 0 0 300px;
@@ -367,15 +367,15 @@ code {
 .cd-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--terminal-bar); border-bottom: 1px solid var(--line); }
 .cd-head b { display: block; font-size: 0.8rem; line-height: 1.2; }
 .cd-head small { color: var(--muted); font-size: 0.7rem; }
-.cd-av { width: 26px; height: 26px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--blue); color: var(--on-color); font-weight: 700; font-size: 0.75rem; }
+.cd-av { width: 26px; height: 26px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: 0.75rem; }
 .cd-chat { height: 340px; overflow: hidden; padding: 10px; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; }
 .cd-m { max-width: 86%; padding: 6px 9px; border-radius: 12px; white-space: pre-line; animation: cd-pop 0.25s ease-out both; }
 .cd-bot { align-self: flex-start; background: var(--surface); border: 1px solid var(--line); border-bottom-left-radius: 3px; }
-.cd-me { align-self: flex-end; background: var(--blue); color: var(--on-color); border-bottom-right-radius: 3px; }
+.cd-me { align-self: flex-end; background: var(--accent); color: var(--on-accent); border-bottom-right-radius: 3px; }
 .cd-tag { align-self: center; font-family: var(--mono); font-size: 0.66rem; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 1px 9px; animation: cd-pop 0.25s ease-out both; }
 .cd-btns { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; white-space: normal; }
-.cd-btns span { border: 1px solid rgba(var(--blue-rgb), 0.55); color: var(--blue); border-radius: 6px; padding: 1px 7px; font-size: 0.72rem; transition: background 0.2s, color 0.2s; }
-.cd-btns span.picked { background: var(--blue); color: var(--on-color); }
+.cd-btns span { border: 1px solid rgba(var(--accent-rgb), 0.55); color: var(--accent); border-radius: 6px; padding: 1px 7px; font-size: 0.72rem; transition: background 0.2s, color 0.2s; }
+.cd-btns span.picked { background: var(--accent); color: var(--on-accent); }
 .cd-typing { align-self: flex-start; display: flex; gap: 3px; padding: 9px 11px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; border-bottom-left-radius: 3px; }
 .cd-typing i { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); animation: cd-blink 1s infinite ease-in-out; }
 .cd-typing i:nth-child(2) { animation-delay: 0.15s; }
@@ -383,7 +383,7 @@ code {
 .cd-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 6px; background: var(--terminal-bar); border-top: 1px solid var(--line); }
 .cd-menu span { text-align: center; padding: 4px 2px; border-radius: 6px; background: var(--surface); border: 1px solid var(--line); font-size: 0.68rem; white-space: nowrap; transition: border-color 0.2s, background 0.2s; }
 .cd-menu span.wide { grid-column: 1 / -1; }
-.cd-menu span.tap { border-color: var(--blue); background: rgba(var(--blue-rgb), 0.18); }
+.cd-menu span.tap { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.18); }
 .cd-notes { flex: 1; list-style: none; margin: 0; padding: 0; counter-reset: cd; }
 .cd-notes li { position: relative; padding: 10px 0 10px 40px; color: var(--muted); font-size: 0.9rem; border-left: 2px solid transparent; transition: color 0.3s; }
 .cd-notes li[data-scene] { counter-increment: cd; }
@@ -394,8 +394,17 @@ code {
 }
 .cd-notes li b { display: block; color: var(--text); font-weight: 500; }
 .cd-notes li.on { color: var(--text); }
-.cd-notes li.on::before { background: var(--blue); border-color: var(--blue); color: var(--on-color); }
-.cd-notes li.on b { color: var(--blue); }
+.cd-notes li.on::before { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.cd-notes li.on b { color: var(--accent); }
+.cd-sys { align-self: center; max-width: 94%; text-align: center; font-size: 0.74rem; color: var(--muted); background: rgba(var(--accent-rgb), 0.1); border: 1px dashed rgba(var(--accent-rgb), 0.55); border-radius: 8px; }
+.cd-sys .cd-btns { justify-content: center; }
+/* Variante ventana (sistema web): sin marco de teléfono, con la barra de un navegador */
+.cd-window { flex-basis: 340px; border-width: 1px; border-color: var(--line); border-radius: 10px; outline: none; }
+.cd-window .cd-head::before { content: ""; flex: none; width: 34px; height: 10px; margin-right: 4px;
+  background: radial-gradient(circle 4px at 5px 50%, var(--terminal-dot) 96%, transparent), radial-gradient(circle 4px at 17px 50%, var(--terminal-dot) 96%, transparent), radial-gradient(circle 4px at 29px 50%, var(--terminal-dot) 96%, transparent); }
+.cd-window .cd-av { border-radius: 6px; }
+.cd-window .cd-bot { border-radius: 8px; max-width: 92%; }
+.cd-window .cd-me { border-radius: 8px; }
 @keyframes cd-pop { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
 @keyframes cd-blink { 0%, 80%, 100% { opacity: 0.3; } 40% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .cd-m, .cd-tag, .cd-typing i { animation: none; } }

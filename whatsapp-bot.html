@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bot de WhatsApp</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a la izquierda el flujo del diagrama (armar, ciclo mensual, en cualquier momento, carga); a la derecha un chat de ejemplo y lo que el bot va guardando. En celular el chat queda fijo arriba y el flujo corre debajo. */
+:root {
+  --bg: #F3F4F9;
+  --surface: #FFFFFF;
+  --ink: #1A1F33;
+  --muted: #586079;
+  --line: #D9DDEA;
+  --line-strong: #A9B0C6;
+  --chat-bg: #EDF0F8;
+  --armar: #6A3FDD;
+  --armar-bg: #EFEAFB;
+  --ciclo: #B85F00;
+  --ciclo-bg: #FBF1DD;
+  --momento: #2355D0;
+  --momento-bg: #E7EEFC;
+  --ok: #0B8A60;
+  --ok-bg: #E2F5EC;
+  --bubble-bot: #FFFFFF;
+  --bubble-me: #2355D0;
+  --bubble-me-ink: #FFFFFF;
+  --shadow: 0 1px 2px rgba(20, 25, 50, .06), 0 8px 22px rgba(20, 25, 50, .07);
+  --f-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --f-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11131C; --surface: #1A1E2B; --ink: #E9ECF7; --muted: #9AA2BB; --line: #2C3246; --line-strong: #4A5370;
+    --chat-bg: #151927;
+    --armar: #AE93FF; --armar-bg: #231E3B;
+    --ciclo: #F2A650; --ciclo-bg: #2F2512;
+    --momento: #86AAFF; --momento-bg: #17233E;
+    --ok: #45D6A4; --ok-bg: #12302A;
+    --bubble-bot: #222839; --bubble-me: #3A66E0; --bubble-me-ink: #FFFFFF;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 22px rgba(0, 0, 0, .35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11131C; --surface: #1A1E2B; --ink: #E9ECF7; --muted: #9AA2BB; --line: #2C3246; --line-strong: #4A5370;
+  --chat-bg: #151927;
+  --armar: #AE93FF; --armar-bg: #231E3B;
+  --ciclo: #F2A650; --ciclo-bg: #2F2512;
+  --momento: #86AAFF; --momento-bg: #17233E;
+  --ok: #45D6A4; --ok-bg: #12302A;
+  --bubble-bot: #222839; --bubble-me: #3A66E0; --bubble-me-ink: #FFFFFF;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 22px rgba(0, 0, 0, .35);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--f-body);
+  padding-block: 22px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+  background: var(--bg); z-index: 30;
+}
+.wrap { max-width: 1180px; margin: 0 auto; }
+h1, h2 { text-wrap: balance; }
+h1 {
+  font-family: var(--f-display); font-weight: 700; letter-spacing: -.02em;
+  font-size: clamp(27px, 5.4vw, 42px); line-height: 1.04; margin: 0 0 8px;
+}
+.lede { color: var(--muted); font-size: 15px; line-height: 1.5; max-width: 58ch; margin: 0 0 20px; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+.flow { grid-row: 2; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.stage {
+  grid-row: 1; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: var(--bg); padding-block: 8px; min-width: 0;
+}
+@media (min-width: 1080px) {
+  .layout { grid-template-columns: minmax(0, 1fr) 380px; gap: 28px; }
+  .flow { grid-column: 1; grid-row: 1; }
+  .stage { grid-column: 2; grid-row: 1; top: 16px; padding-block: 0; background: transparent; }
+}
+
+/* ---------- Controles ---------- */
+.ctl { display: flex; align-items: center; gap: 8px; }
+.icon {
+  appearance: none; width: 40px; height: 40px; flex: none; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  display: grid; place-items: center; cursor: pointer; padding: 0;
+}
+.icon.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.icon:focus-visible, .node:focus-visible, .speed:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.speed {
+  appearance: none; flex: none; height: 40px; min-width: 48px; padding: 0 10px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  font: 500 13px var(--f-mono); cursor: pointer;
+}
+.cap { flex: 1; min-width: 0; line-height: 1.25; }
+.cap small { display: block; font: 500 11px var(--f-mono); color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+.cap b { display: block; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar { height: 3px; background: var(--line); border-radius: 3px; margin: 8px 0 10px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--ink); transition: width .4s ease; }
+
+/* ---------- Chat ---------- */
+.phone { border: 1px solid var(--line); border-radius: 18px; background: var(--surface); overflow: hidden; box-shadow: var(--shadow); }
+.phead { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.av { width: 30px; height: 30px; border-radius: 50%; background: var(--momento); color: var(--surface); display: grid; place-items: center; font: 700 14px var(--f-display); }
+.phead b { display: block; font-size: 14px; line-height: 1.2; }
+.phead small { color: var(--muted); font-size: 12px; }
+.phead .hold { margin-left: auto; font: 500 11px var(--f-mono); color: var(--muted); opacity: 0; transition: opacity .2s; }
+.phone.held .hold { opacity: 1; }
+.chat {
+  height: 220px; overflow-y: auto; padding: 10px; background: var(--chat-bg);
+  display: flex; flex-direction: column; gap: 7px; scroll-behavior: smooth; overscroll-behavior: contain;
+}
+.m {
+  max-width: 88%; padding: 8px 11px; border-radius: 14px; font-size: 14px; line-height: 1.4;
+  white-space: pre-line; overflow-wrap: anywhere; animation: pop .28s ease both;
+}
+.m.bot { align-self: flex-start; background: var(--bubble-bot); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.m.me { align-self: flex-end; background: var(--bubble-me); color: var(--bubble-me-ink); border-bottom-right-radius: 4px; }
+.day { align-self: center; font: 500 11px var(--f-mono); color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 99px; padding: 2px 10px; animation: pop .28s ease both; }
+.btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.btns span { border: 1px solid var(--momento); color: var(--momento); border-radius: 8px; padding: 3px 9px; font-size: 12.5px; font-weight: 500; }
+.typing { align-self: flex-start; display: flex; gap: 4px; padding: 11px 13px; background: var(--bubble-bot); border: 1px solid var(--line); border-radius: 14px; border-bottom-left-radius: 4px; }
+.typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--line-strong); animation: blink 1s infinite ease-in-out; }
+.typing i:nth-child(2) { animation-delay: .15s; }
+.typing i:nth-child(3) { animation-delay: .3s; }
+
+/* ---------- Lo que guarda el bot ---------- */
+.ledger { margin-top: 8px; }
+.ledger h2 { display: none; margin: 0 0 6px; font: 500 11px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.ledger h2 small { text-transform: none; letter-spacing: 0; margin-left: 6px; }
+.ledger ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; overflow-x: auto; scroll-behavior: smooth; }
+.ledger li { flex: none; display: flex; gap: 6px; align-items: baseline; border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 3px 10px; font-size: 12px; }
+.ledger .k { color: var(--muted); }
+.ledger .v { font-family: var(--f-mono); font-size: 12px; }
+.ledger li.new { animation: flash 1.6s ease-out; border-color: var(--ok); }
+@media (min-width: 1080px) {
+  .chat { height: 290px; padding: 12px; gap: 8px; }
+  .ledger { margin-top: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 10px 12px; box-shadow: var(--shadow); }
+  .ledger h2 { display: block; }
+  .ledger ul { flex-direction: column; gap: 0; max-height: 236px; overflow-y: auto; overflow-x: hidden; }
+  .ledger li { border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; padding: 6px 0; justify-content: space-between; gap: 14px; }
+  .ledger li.new { border-top-color: var(--ok); }
+  .ledger .v { text-align: right; }
+}
+
+.m.sys { align-self: center; text-align: center; max-width: 94%; background: var(--surface); border: 1px dashed var(--line-strong); color: var(--muted); font-size: 13px; border-radius: 10px; }
+.m.sys .btns { justify-content: center; }
+.btns span.picked { background: var(--momento); color: var(--surface); }
+.shots { margin-top: 28px; }
+.shots h2 { font: 700 19px/1.15 var(--f-display); margin: 0 0 12px; }
+.shots .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.shots figure { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px; box-shadow: var(--shadow); }
+.shots img { display: block; width: 100%; height: auto; max-height: 420px; object-fit: cover; object-position: top; border-radius: 8px; border: 1px solid var(--line); }
+.shots figcaption { color: var(--muted); font-size: 12.5px; line-height: 1.45; margin-top: 8px; }
+
+/* ---------- Flujo ---------- */
+.sec { --ac: var(--armar); --ac-bg: var(--armar-bg); background: var(--ac-bg); border-radius: 18px; padding: 16px; transition: opacity .3s; }
+.sec[data-g="ciclo"] { --ac: var(--ciclo); --ac-bg: var(--ciclo-bg); }
+.sec[data-g="momento"] { --ac: var(--momento); --ac-bg: var(--momento-bg); }
+.sec[data-g="carga"] { --ac: var(--muted); --ac-bg: var(--surface); border: 1px solid var(--line); }
+.sec:not(.active) { opacity: .8; }
+.sh { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-bottom: 14px; }
+.sn { width: 28px; height: 28px; border-radius: 50%; background: var(--ac); color: var(--surface); display: grid; place-items: center; font: 700 14px var(--f-display); flex: none; }
+.sh h2 { margin: 0; font: 700 19px/1.15 var(--f-display); color: var(--ac); letter-spacing: -.01em; }
+.sh p { margin: 0; font-size: 12.5px; color: var(--muted); }
+
+.row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
+.row.plain { gap: 12px; }
+@media (min-width: 440px) { .row.plain { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 700px) {
+  .row { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 30px; }
+  .row.five { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 26px; }
+  .row.plain { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+}
+
+.node {
+  appearance: none; font: inherit; color: inherit; text-align: left; cursor: pointer; position: relative; min-width: 0;
+  display: flex; flex-direction: column; gap: 6px; padding: 12px 13px; border-radius: 14px;
+  border: 1.5px solid color-mix(in srgb, var(--ac) 40%, var(--line));
+  background: var(--surface);
+  transition: border-color .3s, background .3s, box-shadow .3s, transform .3s;
+  scroll-margin-top: calc(var(--stageh, 16px) + 16px); scroll-margin-bottom: 16px;
+}
+.nt { font: 700 15px/1.2 var(--f-display); color: var(--ac); display: flex; gap: 8px; align-items: center; }
+.nd { font-size: 13px; line-height: 1.45; color: var(--muted); }
+.num { font-style: normal; width: 20px; height: 20px; border-radius: 50%; background: var(--ac); color: var(--surface); display: grid; place-items: center; font: 700 12px var(--f-display); flex: none; }
+.node.seen { border-color: var(--ac); }
+.node.on {
+  border-color: var(--ac); transform: translateY(-2px);
+  background: color-mix(in srgb, var(--ac) 8%, var(--surface));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ac) 30%, transparent), var(--shadow);
+  animation: ring 1.8s ease-in-out infinite;
+}
+.node.ok { --ac: var(--ok); }
+.row.arrows .node:not(:last-child)::after {
+  content: "↓"; position: absolute; left: 50%; bottom: -26px; transform: translateX(-50%);
+  width: 20px; text-align: center; font-size: 18px; line-height: 24px; color: var(--line-strong); transition: color .3s;
+}
+.row.arrows .node.seen:not(:last-child)::after { color: var(--ac); }
+@media (min-width: 700px) {
+  .row.arrows .node:not(:last-child)::after { content: "→"; left: auto; right: -26px; bottom: auto; top: 50%; transform: translateY(-50%); }
+  .row.five.arrows .node:not(:last-child)::after { right: -23px; }
+}
+.pill { text-align: center; justify-content: center; align-items: center; border-radius: 18px; }
+.pill .nt { font-size: 14px; justify-content: center; color: var(--ink); }
+.pill.seen .nt, .pill.on .nt { color: var(--ac); }
+.pill.last.seen, .pill.last.on { background: var(--ok); }
+.pill.last.seen .nt, .pill.last.on .nt { color: #fff; }
+.pill.last.seen { border-color: var(--ok); }
+
+.loop {
+  appearance: none; font: 600 13px var(--f-body); cursor: pointer; margin: 18px auto 0; display: flex; gap: 8px; align-items: center;
+  padding: 8px 16px; border-radius: 99px; color: var(--muted); background: transparent;
+  border: 1.5px dashed color-mix(in srgb, var(--ac) 50%, var(--line)); transition: all .3s;
+  scroll-margin-top: calc(var(--stageh, 16px) + 16px); scroll-margin-bottom: 16px;
+}
+.loop:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.loop.seen { color: var(--ac); border-color: var(--ac); }
+.loop.on { color: var(--surface); background: var(--ac); border-style: solid; border-color: var(--ac); animation: ring 1.8s ease-in-out infinite; }
+.loop.on span { display: inline-block; animation: spin 1.4s linear infinite; }
+.foot { color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: 6px 2px 0; }
+
+@keyframes pop { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes blink { 0%, 80%, 100% { opacity: .3; } 40% { opacity: 1; } }
+@keyframes flash { from { background: color-mix(in srgb, var(--ok) 28%, transparent); } to { background: transparent; } }
+@keyframes ring {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--ac) 30%, transparent), var(--shadow); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--ac) 12%, transparent), var(--shadow); }
+}
+@keyframes spin { to { transform: rotate(-360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+</style>
+
+<style>body{margin:0;font-size:14px}
+:root { --bubble-me: #1F8A5B; --momento: #1F8A5B; --momento-bg: #E3F4EB; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bubble-me: #2A9D68; --momento: #5FD39A; --momento-bg: #12291F; } }
+:root[data-theme="dark"] { --bubble-me: #2A9D68; --momento: #5FD39A; --momento-bg: #12291F; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="margin:0 0 14px;font-size:13.5px"><a href="index.html#proyectos" style="color:var(--muted)">← Volver al portfolio</a></p>
+  <h1>Cómo funciona el bot de WhatsApp</h1>
+  <p class="lede">Atiende el primer contacto de un negocio por WhatsApp: responde las preguntas frecuentes y, cuando alguien quiere comprar, le pasa la charla a una persona. Tocá cualquier paso para verlo, o dejá que corra.</p>
+
+  <div class="layout">
+    <aside class="stage" id="stage" aria-label="Simulación">
+      <div class="ctl">
+        <button class="icon primary" id="play" type="button" aria-label="Pausar"></button>
+        <button class="icon" id="prev" type="button" aria-label="Paso anterior"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <button class="icon" id="next" type="button" aria-label="Paso siguiente"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+        <div class="cap"><small id="capGroup"></small><b id="capTitle"></b></div>
+        <button class="speed" id="speed" type="button" aria-label="Velocidad">1×</button>
+      </div>
+      <div class="bar" aria-hidden="true"><i id="barFill"></i></div>
+      <div class="phone">
+        <div class="phead"><span class="av" aria-hidden="true">P</span><div><b>PrintLab 3D</b><small>WhatsApp · datos de ejemplo</small></div><span class="hold">⏸ pausado</span></div>
+        <div class="chat" id="chat" aria-live="polite"></div>
+      </div>
+      <div class="ledger">
+        <h2>Lo que guarda el bot <small>ejemplo</small></h2>
+        <ul id="ledger"></ul>
+      </div>
+    </aside>
+
+    <main class="flow">
+      <section class="sec" data-g="armar">
+        <header class="sh"><span class="sn">1</span><h2>Una sola vez: configurar</h2><p>se hace al sumar un negocio</p></header>
+        <div class="row arrows">
+          <button class="node" data-step="0" type="button"><span class="nt">Número de WhatsApp</span><span class="nd">Se conecta a la API oficial de WhatsApp Business de Meta. Puede atender varios números a la vez.</span></button>
+          <button class="node" data-step="1" type="button"><span class="nt">Preguntas frecuentes</span><span class="nd">Cada una con sus palabras clave y varias respuestas posibles. Se cargan en un archivo, sin tocar la lógica.</span></button>
+          <button class="node" data-step="2" type="button"><span class="nt">Frases de compra</span><span class="nd">“Cotizar”, “precio”, “cuánto sale”, “quiero comprar”… Si aparecen, la charla pasa a una persona.</span></button>
+          <button class="node ok" data-step="3" type="button"><span class="nt">Listo</span><span class="nd">Desde acá el bot responde solo, a toda hora.</span></button>
+        </div>
+      </section>
+
+      <section class="sec" data-g="ciclo">
+        <header class="sh"><span class="sn">2</span><h2>Cada mensaje que llega</h2><p>se repite con cada mensaje</p></header>
+        <div class="row arrows">
+          <button class="node" data-step="4" type="button"><span class="nt"><i class="num">1</i>Llega el mensaje</span><span class="nd">Entra a una cola: atiende varias charlas a la vez, pero dentro de cada una va de a un mensaje y en orden.</span></button>
+          <button class="node" data-step="5" type="button"><span class="nt"><i class="num">2</i>Busca una regla</span><span class="nd">Pasa el texto a minúsculas, sin tildes ni signos, y lo compara por palabras completas.</span></button>
+          <button class="node" data-step="6" type="button"><span class="nt"><i class="num">3</i>Responde</span><span class="nd">Elige una de las respuestas al azar, marca el mensaje como leído y muestra “escribiendo…”.</span></button>
+          <button class="node" data-step="7" type="button"><span class="nt"><i class="num">4</i>Guarda todo</span><span class="nd">Cada mensaje queda en la base con su categoría, para el dashboard y las métricas.</span></button>
+        </div>
+        <button class="loop" data-step="8" type="button"><span aria-hidden="true">↺</span>y espera el próximo mensaje</button>
+      </section>
+
+      <section class="sec" data-g="momento">
+        <header class="sh"><span class="sn">3</span><h2>Cuando el bot no alcanza</h2><p>ahí entra una persona</p></header>
+        <div class="row plain">
+          <button class="node" data-step="9" type="button"><span class="nt">No sabe la respuesta</span><span class="nd">Manda un mensaje de resguardo y deja la pregunta pendiente de revisión, para que no se pierda.</span></button>
+          <button class="node" data-step="10" type="button"><span class="nt">Quiere comprar</span><span class="nd">Avisa al cliente que lo atiende ventas, deja de responder solo y marca la charla para un vendedor.</span></button>
+          <button class="node" data-step="11" type="button"><span class="nt">Dashboard</span><span class="nd">Lista lo pendiente con el mensaje y hace cuánto llegó. Se marca como atendido o se reactiva el bot.</span></button>
+          <button class="node" data-step="12" type="button"><span class="nt">Algo falla</span><span class="nd">Si se cae algo interno, contesta un mensaje fijo y simple en vez de quedarse callado.</span></button>
+        </div>
+      </section>
+
+      <section class="sec" data-g="carga">
+        <header class="sh"><h2 style="color:var(--ink)">Así decide cada respuesta, siempre igual</h2></header>
+        <div class="row five arrows">
+          <button class="node pill" data-step="13" type="button"><span class="nt">Llega el texto</span></button>
+          <button class="node pill" data-step="14" type="button"><span class="nt">Lo normaliza</span></button>
+          <button class="node pill" data-step="15" type="button"><span class="nt">¿Quiere comprar? Pasa a ventas</span></button>
+          <button class="node pill" data-step="16" type="button"><span class="nt">¿Es una pregunta frecuente? Responde</span></button>
+          <button class="node pill last" data-step="17" type="button"><span class="nt">Si no, queda para revisar</span></button>
+        </div>
+      </section>
+      <p class="foot">Simulación con datos de ejemplo de un negocio de impresión 3D. No está conectada al bot real. Hay una IA opcional, apagada por defecto, que solo podría responder con las mismas preguntas frecuentes.</p>
+      <section class="shots">
+        <h2>Capturas del sistema</h2>
+        <div class="grid">
+        <figure><a href="img/whatsapp-bot/dashboard.jpg"><img src="img/whatsapp-bot/dashboard.jpg" alt="Dashboard del bot: conversaciones pendientes de revisión y métricas generales" loading="lazy" width="480" height="868"></a><figcaption>Dashboard con datos de prueba: pendientes de revisión, totales y acciones por conversación.</figcaption></figure>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+(function () {
+  var GROUPS = {"armar": "Una sola vez", "ciclo": "Cada mensaje", "momento": "Cuando el bot no alcanza", "carga": "Cada respuesta"};
+  var S = [
+    {"g": "armar", "t": "Número de WhatsApp", "m": [["sys", "Meta reenvía cada mensaje que llega al número del negocio a este servidor."]], "s": [["Canal", "Ventas"]]},
+    {"g": "armar", "t": "Preguntas frecuentes", "m": [["sys", "Horarios\nPalabras: horario, a qué hora abren, atienden\n2 respuestas posibles"]], "s": [["Preguntas frecuentes", "8 cargadas"]]},
+    {"g": "armar", "t": "Frases de compra", "m": [["sys", "Intención de compra\ncotizar · precio · cuánto sale · quiero comprar…"]], "s": [["Frases de compra", "10"]]},
+    {"g": "armar", "t": "Listo", "m": [["sys", "Listo ✓ El bot ya responde."]], "s": []},
+    {"g": "ciclo", "t": "Llega el mensaje", "m": [["me", "Hola! ¿a qué hora abren?"]], "s": [["Conversaciones", "1 activa"]]},
+    {"g": "ciclo", "t": "Busca una regla", "m": [["sys", "Texto: “hola a que hora abren”\nCoincide con: Horarios"]], "s": []},
+    {"g": "ciclo", "t": "Responde", "m": [["bot", "Trabajamos de lunes a viernes de 10 a 19hs, y sábados de 10 a 14hs."]], "s": []},
+    {"g": "ciclo", "t": "Guarda todo", "m": [["sys", "Guardado · categoría Horarios"]], "s": [["Último mensaje", "Horarios · respondido"]]},
+    {"g": "ciclo", "t": "El próximo mensaje", "m": [["me", "¿aceptan stl?"], ["bot", "Podés mandarnos el archivo en STL u OBJ. Si no tenés el modelo 3D todavía, lo armamos nosotros."]], "s": [["Último mensaje", "Formatos de archivo · respondido"]]},
+    {"g": "momento", "t": "No sabe la respuesta", "m": [["me", "¿pueden imprimir en nylon?"], ["bot", "¡Recibimos tu mensaje! En breve te responde alguien del equipo."], ["sys", "Sin coincidencia: queda pendiente de revisión"]], "s": [["Pendientes", "1"]]},
+    {"g": "momento", "t": "Quiere comprar", "m": [["me", "Quiero cotizar una pieza"], ["bot", "¡Perfecto! Ya te conecto con alguien de ventas. En breve te escriben por acá."], ["sys", "Conversación derivada: el bot deja de responder"]], "s": [["Conversación", "derivada"], ["Pendientes", "2"]]},
+    {"g": "momento", "t": "Dashboard", "m": [["sys", "Dashboard · Pendientes de revisión\n• hace 4 min · Sin respuesta · “¿pueden imprimir en nylon?”\n• hace 1 min · Intención de compra · “Quiero cotizar una pieza”", ["Abrir chat", "Reactivar bot", "Marcar como atendido"]], ["sys", "✓ Marcados como atendidos"]], "s": [["Pendientes", "0"]]},
+    {"g": "momento", "t": "Algo falla", "m": [["me", "¿tienen PETG?"], ["sys", "Falla interna (ejemplo)"], ["bot", "Recibimos tu consulta, en breve te contactamos. Gracias por tu paciencia."]], "s": []},
+    {"g": "carga", "t": "Llega el texto", "m": [["me", "¿Cuánto sale una pieza?"]], "s": []},
+    {"g": "carga", "t": "Lo normaliza", "m": [["sys", "“cuanto sale una pieza”"]], "s": []},
+    {"g": "carga", "t": "¿Quiere comprar? Pasa a ventas", "m": [["sys", "“cuanto sale” es una frase de compra"], ["bot", "¡Genial! Te paso con alguien del equipo de ventas para ayudarte. En breve te contactan por acá."]], "s": [["Conversación", "derivada"]]},
+    {"g": "carga", "t": "¿Es una pregunta frecuente? Responde", "m": [["sys", "Si no fuera compra, busca la primera pregunta frecuente que coincida y responde."]], "s": []},
+    {"g": "carga", "t": "Si no, queda para revisar", "m": [["sys", "Y si nada coincide: mensaje de resguardo y queda pendiente en el dashboard."]], "s": []}
+  ];
+  var N = S.length;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var chat = $('chat'), ledgerEl = $('ledger'), stage = $('stage');
+  var targets = Array.prototype.slice.call(document.querySelectorAll('[data-step]'));
+  var secs = Array.prototype.slice.call(document.querySelectorAll('.sec'));
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var wide = window.matchMedia('(min-width: 1080px)');
+
+  var cur = 0, playing = false, speed = 1, run = 0;
+  var SPEEDS = [1, 1.5, 2];
+
+  var ICON = {
+    play: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>',
+    pause: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>',
+    again: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>'
+  };
+
+  // Espera ms (según la velocidad). Mientras el mouse está sobre el chat, el tiempo no corre: da para leer tranquilo.
+  var hold = false;
+  function sleep(ms) {
+    return new Promise(function (r) {
+      var left = ms / speed;
+      (function tick() {
+        if (left <= 0) return r();
+        if (!hold) left -= 100;
+        setTimeout(tick, 100);
+      })();
+    });
+  }
+
+  function bubble(m) {
+    var el = document.createElement('div');
+    if (m[0] === 'day') { el.className = 'day'; el.textContent = m[1]; return el; }
+    el.className = 'm ' + m[0];
+    el.appendChild(document.createTextNode(m[1]));
+    if (m[2]) {
+      var b = document.createElement('div'); b.className = 'btns';
+      m[2].forEach(function (t) { var s = document.createElement('span'); s.textContent = t; b.appendChild(s); });
+      el.appendChild(b);
+    }
+    return el;
+  }
+  function add(m) { chat.appendChild(bubble(m)); chat.scrollTop = chat.scrollHeight; }
+  function typing() {
+    var t = document.createElement('div'); t.className = 'typing';
+    t.innerHTML = '<i></i><i></i><i></i>'; chat.appendChild(t); chat.scrollTop = chat.scrollHeight; return t;
+  }
+
+  function ledgerAt(i, flash) {
+    var map = new Map(), fresh = {};
+    for (var j = 0; j <= i; j++) {
+      S[j].s.forEach(function (kv) {
+        map.set(kv[0], kv[1]);
+        if (j === i) fresh[kv[0]] = true;
+      });
+    }
+    ledgerEl.innerHTML = '';
+    map.forEach(function (v, k) {
+      var li = document.createElement('li');
+      if (flash && fresh[k]) li.className = 'new';
+      var a = document.createElement('span'); a.className = 'k'; a.textContent = k;
+      var b = document.createElement('span'); b.className = 'v'; b.textContent = v;
+      li.appendChild(a); li.appendChild(b); ledgerEl.appendChild(li);
+    });
+    ledgerEl.scrollLeft = ledgerEl.scrollWidth;
+    ledgerEl.scrollTop = ledgerEl.scrollHeight;
+  }
+
+  function paint(i) {
+    var g = S[i].g;
+    targets.forEach(function (el) {
+      var n = +el.getAttribute('data-step');
+      el.classList.toggle('on', n === i);
+      el.classList.toggle('seen', n < i);
+    });
+    secs.forEach(function (s) { s.classList.toggle('active', s.getAttribute('data-g') === g); });
+    $('capGroup').textContent = (i + 1) + ' de ' + N + ' · ' + GROUPS[g];
+    $('capTitle').textContent = S[i].t;
+    $('barFill').style.width = ((i + 1) / N * 100) + '%';
+    $('prev').disabled = i === 0;
+    $('prev').style.opacity = i === 0 ? .45 : 1;
+    $('next').disabled = i === N - 1;
+    $('next').style.opacity = i === N - 1 ? .45 : 1;
+  }
+
+  function setBtn() {
+    var b = $('play');
+    var atEnd = !playing && cur === N - 1;
+    b.innerHTML = playing ? ICON.pause : (atEnd ? ICON.again : ICON.play);
+    b.setAttribute('aria-label', playing ? 'Pausar' : (atEnd ? 'Ver de nuevo' : 'Reproducir'));
+  }
+
+  function measure() {
+    document.documentElement.style.setProperty('--stageh', wide.matches ? '16px' : stage.offsetHeight + 'px');
+  }
+
+  async function show(i, animated) {
+    var id = ++run;
+    cur = i;
+    paint(i);
+    measure();
+    chat.innerHTML = '';
+    for (var j = 0; j < i; j++) {
+      if (S[j].g === S[i].g) S[j].m.forEach(add);
+    }
+    var prior = [];
+    if (!animated) {
+      S[i].m.forEach(add);
+      ledgerAt(i, false);
+    } else {
+      ledgerAt(i - 1 < 0 ? -1 : i - 1, false);
+      var node = document.querySelector('[data-step="' + i + '"]');
+      if (node && node.scrollIntoView && !reduce) node.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      for (var k = 0; k < S[i].m.length; k++) {
+        var m = S[i].m[k];
+        if (m[0] === 'bot') { var t = typing(); await sleep(1100); t.remove(); }
+        else if (m[0] === 'me') { await sleep(1300); }
+        else { await sleep(800); }
+        if (id !== run) return;
+        add(m);
+        // Tiempo para leer: más largo el mensaje, más espera.
+        if (m[0] !== 'day') { await sleep(1400 + m[1].length * 60); if (id !== run) return; }
+      }
+      ledgerAt(i, true);
+    }
+    setBtn();
+    if (id !== run) return;
+    if (playing) {
+      await sleep(3500);
+      if (id !== run || !playing) return;
+      if (i < N - 1) { show(i + 1, true); }
+      else { playing = false; setBtn(); }
+    }
+  }
+
+  function go(i) { show(Math.max(0, Math.min(N - 1, i)), false); }
+
+  $('play').addEventListener('click', function () {
+    if (playing) { playing = false; setBtn(); return; }
+    playing = true;
+    if (cur === N - 1) { show(0, false); } else { show(cur, false); }
+  });
+  $('prev').addEventListener('click', function () { go(cur - 1); });
+  $('next').addEventListener('click', function () { go(cur + 1); });
+  $('speed').addEventListener('click', function () {
+    var k = (SPEEDS.indexOf(speed) + 1) % SPEEDS.length;
+    speed = SPEEDS[k]; this.textContent = (speed === 1.5 ? '1,5' : speed) + '×';
+  });
+  targets.forEach(function (el) {
+    el.addEventListener('click', function () { go(+el.getAttribute('data-step')); });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight') go(cur + 1);
+    if (e.key === 'ArrowLeft') go(cur - 1);
+  });
+  window.addEventListener('resize', measure);
+  var phone = document.querySelector('.phone');
+  phone.addEventListener('mouseenter', function () { hold = true; phone.classList.add('held'); });
+  phone.addEventListener('mouseleave', function () { hold = false; phone.classList.remove('held'); });
+
+  playing = !reduce;
+  show(0, false);
+})();
+</script>
+
+</body>
+</html>
