@@ -396,7 +396,6 @@ code {
 .cd-notes li.on { color: var(--text); }
 .cd-notes li.on::before { background: var(--blue); border-color: var(--blue); color: var(--on-color); }
 .cd-notes li.on b { color: var(--blue); }
-.cd-notes .cd-more { padding-top: 14px; }
 @keyframes cd-pop { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
 @keyframes cd-blink { 0%, 80%, 100% { opacity: 0.3; } 40% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .cd-m, .cd-tag, .cd-typing i { animation: none; } }
