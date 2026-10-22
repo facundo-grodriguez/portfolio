@@ -225,7 +225,7 @@
           if (st[0] === "bot") {
             var t = el("cd-typing");
             t.innerHTML = "<i></i><i></i><i></i>";
-            await wait(900);
+            await wait(1100);
             t.remove();
             var b = el("cd-m cd-bot", st[1]);
             if (st[2]) {
@@ -234,20 +234,20 @@
               st[2].forEach(function (txt) { var sp = document.createElement("span"); sp.textContent = txt; row.appendChild(sp); });
               b.appendChild(row);
             }
-            await wait(700 + st[1].length * 30);
+            await wait(1400 + st[1].length * 60);
           } else {
             // Antes de "escribir", se ve qué botón se toca.
             var tocado = null;
             Array.prototype.forEach.call(lastButtons(), function (sp) { if (sp.textContent === st[1]) tocado = sp; });
             menu.forEach(function (sp) { if (sp.textContent === st[1]) tocado = sp; });
-            await wait(600);
+            await wait(900);
             if (tocado) { tocado.classList.add(tocado.closest(".cd-menu") ? "tap" : "picked"); await wait(500); }
             el("cd-m cd-me", st[1]);
             if (tocado && tocado.closest(".cd-menu")) tocado.classList.remove("tap");
-            await wait(500);
+            await wait(800);
           }
         }
-        await wait(2800);
+        await wait(3500);
       }
     }
   }

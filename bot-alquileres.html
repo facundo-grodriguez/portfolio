@@ -116,8 +116,10 @@ h1 {
 .av { width: 30px; height: 30px; border-radius: 50%; background: var(--momento); color: var(--surface); display: grid; place-items: center; font: 700 14px var(--f-display); }
 .phead b { display: block; font-size: 14px; line-height: 1.2; }
 .phead small { color: var(--muted); font-size: 12px; }
+.phead .hold { margin-left: auto; font: 500 11px var(--f-mono); color: var(--muted); opacity: 0; transition: opacity .2s; }
+.phone.held .hold { opacity: 1; }
 .chat {
-  height: 150px; overflow-y: auto; padding: 10px; background: var(--chat-bg);
+  height: 220px; overflow-y: auto; padding: 10px; background: var(--chat-bg);
   display: flex; flex-direction: column; gap: 7px; scroll-behavior: smooth; overscroll-behavior: contain;
 }
 .m {
@@ -252,7 +254,7 @@ h1 {
       </div>
       <div class="bar" aria-hidden="true"><i id="barFill"></i></div>
       <div class="phone">
-        <div class="phead"><span class="av" aria-hidden="true">B</span><div><b>Bot de alquileres</b><small>Telegram · datos de ejemplo</small></div></div>
+        <div class="phead"><span class="av" aria-hidden="true">B</span><div><b>Bot de alquileres</b><small>Telegram · datos de ejemplo</small></div><span class="hold">⏸ pausado</span></div>
         <div class="chat" id="chat" aria-live="polite"></div>
       </div>
       <div class="ledger">
@@ -382,7 +384,18 @@ h1 {
     again: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>'
   };
 
-  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms / speed); }); }
+  // Espera ms (según la velocidad). Mientras el mouse está sobre el chat, el tiempo no corre: da para leer tranquilo.
+  var hold = false;
+  function sleep(ms) {
+    return new Promise(function (r) {
+      var left = ms / speed;
+      (function tick() {
+        if (left <= 0) return r();
+        if (!hold) left -= 100;
+        setTimeout(tick, 100);
+      })();
+    });
+  }
 
   function bubble(m) {
     var el = document.createElement('div');
@@ -469,20 +482,20 @@ h1 {
       if (node && node.scrollIntoView && !reduce) node.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       for (var k = 0; k < S[i].m.length; k++) {
         var m = S[i].m[k];
-        if (m[0] === 'bot') { var t = typing(); await sleep(900); t.remove(); }
-        else if (m[0] === 'me') { await sleep(1000); }
-        else { await sleep(600); }
+        if (m[0] === 'bot') { var t = typing(); await sleep(1100); t.remove(); }
+        else if (m[0] === 'me') { await sleep(1300); }
+        else { await sleep(800); }
         if (id !== run) return;
         add(m);
         // Tiempo para leer: más largo el mensaje, más espera.
-        if (m[0] !== 'day') { await sleep(500 + m[1].length * 35); if (id !== run) return; }
+        if (m[0] !== 'day') { await sleep(1400 + m[1].length * 60); if (id !== run) return; }
       }
       ledgerAt(i, true);
     }
     setBtn();
     if (id !== run) return;
     if (playing) {
-      await sleep(2500);
+      await sleep(3500);
       if (id !== run || !playing) return;
       if (i < N - 1) { show(i + 1, true); }
       else { playing = false; setBtn(); }
@@ -510,6 +523,9 @@ h1 {
     if (e.key === 'ArrowLeft') go(cur - 1);
   });
   window.addEventListener('resize', measure);
+  var phone = document.querySelector('.phone');
+  phone.addEventListener('mouseenter', function () { hold = true; phone.classList.add('held'); });
+  phone.addEventListener('mouseleave', function () { hold = false; phone.classList.remove('held'); });
 
   playing = !reduce;
   show(0, false);
