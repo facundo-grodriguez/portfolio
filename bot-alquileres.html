@@ -469,18 +469,20 @@ h1 {
       if (node && node.scrollIntoView && !reduce) node.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       for (var k = 0; k < S[i].m.length; k++) {
         var m = S[i].m[k];
-        if (m[0] === 'bot') { var t = typing(); await sleep(520); t.remove(); }
-        else if (m[0] === 'me') { await sleep(480); }
-        else { await sleep(200); }
+        if (m[0] === 'bot') { var t = typing(); await sleep(900); t.remove(); }
+        else if (m[0] === 'me') { await sleep(1000); }
+        else { await sleep(600); }
         if (id !== run) return;
         add(m);
+        // Tiempo para leer: más largo el mensaje, más espera.
+        if (m[0] !== 'day') { await sleep(500 + m[1].length * 35); if (id !== run) return; }
       }
       ledgerAt(i, true);
     }
     setBtn();
     if (id !== run) return;
     if (playing) {
-      await sleep(1700);
+      await sleep(2500);
       if (id !== run || !playing) return;
       if (i < N - 1) { show(i + 1, true); }
       else { playing = false; setBtn(); }
