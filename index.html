@@ -8,7 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=20261022c">
+  <link rel="stylesheet" href="css/styles.css?v=20261022d">
+  <link rel="stylesheet" href="css/recibos-demo.css?v=20261022d">
   <script>
     // Tema antes de pintar la página, para que no parpadee: el elegido o, si no hay, el del sistema.
     (function () {
@@ -108,18 +109,9 @@ Mitre 450 · Octubre 2026 · $ 320.000</div>
         <p class="lead">Desarrollé un sistema que genera el recibo de sueldo en el nuevo formato Anexo III a partir de liquidaciones ya calculadas.</p>
         <p class="status">Un estudio contable lo usa en un piloto real: un solo cliente, con datos reales. Pasó una etapa de QA funcional con veredicto favorable. Todavía no es un producto con varios clientes.</p>
         <div class="chat-demo" data-demo="recibos">
-          <div class="cd-phone cd-window" aria-hidden="true">
-            <div class="cd-head"><span class="cd-av">R</span><div><b>Recibos · Anexo III</b><small>sistema web · datos de ejemplo</small></div></div>
-            <div class="cd-chat">
-              <div class="cd-tag">Emitir el PDF</div>
-              <div class="cd-m cd-me">Emitir recibos</div>
-              <div class="cd-m cd-bot">📄 3 recibos Anexo III emitidos
-Una hoja A4 cada uno, guardados sin cambios posibles<div class="cd-btns"><span class="picked">Descargar ZIP</span></div></div>
-            </div>
-            <div class="cd-menu"><span>📥 Importaciones</span><span>🏷️ Conceptos</span><span>👥 Empleados</span><span>📄 Recibos</span></div>
-          </div>
+          <div class="rd-app" data-rd="card" aria-hidden="true"><img class="rd-fallback" src="img/recibos/vista-previa-importacion.png" alt="" loading="lazy"></div>
           <ol class="cd-notes">
-            <li data-scene="0"><b>Importar y revisar</b>Sube el Excel de la liquidación ya calculada y muestra fila por fila qué está bien y qué no. Nada se guarda hasta confirmar.</li>
+            <li data-scene="0"><b>Importar y revisar</b>Se sube el Excel de la liquidación ya calculada y la vista previa marca fila por fila qué está bien y qué no. Se corrige ahí mismo; nada se guarda hasta confirmar.</li>
             <li data-scene="1"><b>Clasificar y validar</b>Cada concepto se clasifica una sola vez por empresa. Bloquea lo que impide emitir y advierte variaciones raras.</li>
             <li data-scene="2"><b>Emitir el PDF</b>Genera en lote el recibo en formato Anexo III, una hoja A4 por empleado, y lo guarda tal cual se emitió.</li>
           </ol>
@@ -235,6 +227,7 @@ Una hoja A4 cada uno, guardados sin cambios posibles<div class="cd-btns"><span c
   <button type="button" class="to-top" aria-label="Volver arriba" hidden>
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 16V4M4 9l6-6 6 6"/></svg>
   </button>
-  <script src="js/main.js?v=20261022c"></script>
+  <script src="js/recibos-demo.js?v=20261022d"></script>
+  <script src="js/main.js?v=20261022d"></script>
 </body>
 </html>

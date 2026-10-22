@@ -136,6 +136,7 @@
 
 // Demos animadas de los proyectos: cada una se escribe sola, en tres escenas, y marca la nota de cada escena.
 // Solo corren cuando están a la vista. Sin JS o con movimiento reducido queda la versión fija del HTML.
+// Recibos no es un chat: sus pantallas salen de js/recibos-demo.js.
 // Tipos de mensaje: "bot" (izquierda), "me" (derecha), "sys" (tarjeta al centro) y "act" (toca un botón sin escribir nada).
 (function () {
   var DEMOS = {
@@ -171,33 +172,6 @@
         ["bot", "En diciembre. Con el IPC pasaría de $ 320.000 a $ 352.000."]
       ]]
     ],
-    recibos: [
-      ["Importar y revisar", [
-        ["me", "📥 Importaciones"],
-        ["bot", "Importar archivo\nPeríodo y Excel Oficial de Importación (.xlsx)"],
-        ["me", "Octubre 2026 · liquidacion-oct.xlsx"],
-        ["bot", "Vista previa · 3 empleados · 18 filas\n✓ 17 válidas   ✗ 1 con error"],
-        ["bot", "Fila 9 · Gómez, Ana\nCUIL inválido", ["Corregir fila"]],
-        ["me", "Corregir fila"],
-        ["bot", "✓ 18 válidas. Nada se guarda hasta confirmar.", ["Confirmar importación", "Descartar"]],
-        ["me", "Confirmar importación"],
-        ["bot", "✅ Importación confirmada"]
-      ]],
-      ["Clasificar y validar", [
-        ["bot", "Validación: todavía no se puede emitir\n1 concepto sin clasificar: Presentismo", ["Remunerativo", "No remunerativo", "Deducción", "Contribución patronal"]],
-        ["me", "Remunerativo"],
-        ["bot", "Queda en el catálogo de la empresa: el mes que viene ya viene clasificado.\nTotales recalculados ✓"],
-        ["bot", "✓ Se puede emitir\n⚠️ Pérez, Juan: el neto varió más de 30% contra el mes anterior"]
-      ]],
-      ["Emitir el PDF", [
-        ["me", "📄 Recibos"],
-        ["bot", "Fecha y lugar de pago: completos ✓", ["Emitir recibos"]],
-        ["me", "Emitir recibos"],
-        ["bot", "📄 3 recibos Anexo III emitidos\nUna hoja A4 cada uno, guardados sin cambios posibles", ["Descargar ZIP"]],
-        ["me", "Descargar ZIP"],
-        ["bot", "Recibo - Gómez Ana - Octubre 2026.pdf\nRecibo - Pérez Juan - Octubre 2026.pdf\nRecibo - Sosa Luis - Octubre 2026.pdf"]
-      ]]
-    ],
     whatsapp: [
       ["Preguntas frecuentes · sin IA", [
         ["me", "Hola! ¿a qué hora abren?"],
@@ -224,13 +198,16 @@
 
   var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   Array.prototype.forEach.call(document.querySelectorAll(".chat-demo[data-demo]"), function (demo) {
-    var SCENES = DEMOS[demo.getAttribute("data-demo")];
+    var kind = demo.getAttribute("data-demo");
+    var SCENES = DEMOS[kind];
     var notes = demo.querySelectorAll(".cd-notes li[data-scene]");
     function mark(scene) {
       notes.forEach(function (li) { li.classList.toggle("on", +li.getAttribute("data-scene") === scene); });
     }
     mark(0);
-    if (!SCENES || reduce || !window.IntersectionObserver) return;
+    // Recibos es un sistema web: muestra sus pantallas en vez de un chat (js/recibos-demo.js).
+    var rd = kind === "recibos" && window.RecibosDemo ? window.RecibosDemo : null;
+    if ((!SCENES && !rd) || reduce || !window.IntersectionObserver) return;
 
     var chat = demo.querySelector(".cd-chat");
     var menu = Array.prototype.slice.call(demo.querySelectorAll(".cd-menu span"));
@@ -273,6 +250,19 @@
       menu.forEach(function (sp) { if (sp.textContent === text) found = sp; });
       return found;
     }
+
+    async function playScreens() {
+      var app = window.RecibosDemo.mount(demo.querySelector(".rd-app"));
+      var yes = function () { return true; };
+      for (;;) {
+        for (var s = 0; s < rd.card.length; s++) {
+          mark(s);
+          await app.play(rd.card[s], wait, yes);
+          await wait(2500);
+        }
+      }
+    }
+    if (rd) { playScreens(); return; }
 
     async function play() {
       for (;;) {

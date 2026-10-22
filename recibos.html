@@ -7,7 +7,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-/* Layout: a la izquierda el flujo del diagrama (armar, ciclo mensual, en cualquier momento, carga); a la derecha un chat de ejemplo y lo que el bot va guardando. En celular el chat queda fijo arriba y el flujo corre debajo. */
+/* Layout: a la izquierda el flujo del diagrama (armar, ciclo mensual, en cualquier momento, carga); a la derecha las pantallas del sistema (simuladas) y lo que va quedando guardado. En celular la simulación queda fija arriba y el flujo corre debajo. */
 :root {
   --bg: #F3F4F9;
   --surface: #FFFFFF;
@@ -245,16 +245,21 @@ h1 {
 }
 </style>
 
-<style>body{margin:0;font-size:14px}</style>
+<link rel="stylesheet" href="css/recibos-demo.css?v=20261022d">
+<style>body{margin:0;font-size:14px}
+.stage .rd-app { height: 300px; }
+@media (min-width: 1080px) { .stage .rd-app { height: 430px; } }
+.rd-app.held::after { content: "⏸ pausado"; position: absolute; top: 9px; right: 150px; font: 500 10px var(--f-mono); color: #868e96; }
+</style>
 </head>
 <body>
 <div class="wrap">
   <p style="margin:0 0 14px;font-size:13.5px"><a href="index.html#proyectos" style="color:var(--muted)">← Volver al portfolio</a></p>
   <h1>Cómo funciona Recibos de sueldo</h1>
-  <p class="lede">Es un sistema web. No calcula sueldos: toma la liquidación que ya hizo la empresa, la revisa y emite el recibo en el formato nuevo (Anexo III). Tocá cualquier paso para verlo, o dejá que corra.</p>
+  <p class="lede">Es un sistema web. No calcula sueldos: toma la liquidación que ya hizo la empresa, la revisa y emite el recibo en el formato nuevo (Anexo III). Así se ven sus pantallas. Tocá cualquier paso para verlo, o dejá que corra.</p>
 
   <div class="layout">
-    <aside class="stage" id="stage" aria-label="Simulación">
+    <aside class="stage" id="stage" aria-label="Simulación del sistema">
       <div class="ctl">
         <button class="icon primary" id="play" type="button" aria-label="Pausar"></button>
         <button class="icon" id="prev" type="button" aria-label="Paso anterior"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
@@ -263,12 +268,9 @@ h1 {
         <button class="speed" id="speed" type="button" aria-label="Velocidad">1×</button>
       </div>
       <div class="bar" aria-hidden="true"><i id="barFill"></i></div>
-      <div class="phone">
-        <div class="phead"><span class="av" aria-hidden="true">R</span><div><b>Recibos · Anexo III</b><small>sistema web · datos de ejemplo</small></div><span class="hold">⏸ pausado</span></div>
-        <div class="chat" id="chat" aria-live="polite"></div>
-      </div>
+      <div class="rd-app" id="rdapp" aria-live="polite"></div>
       <div class="ledger">
-        <h2>Lo que guarda el sistema <small>ejemplo</small></h2>
+        <h2>Lo que queda guardado <small>ejemplo</small></h2>
         <ul id="ledger"></ul>
       </div>
     </aside>
@@ -289,7 +291,7 @@ h1 {
         <div class="row arrows">
           <button class="node" data-step="4" type="button"><span class="nt"><i class="num">1</i>Importás el Excel</span><span class="nd">La liquidación que ya calculó la empresa, en el formato oficial: una fila por empleado y concepto.</span></button>
           <button class="node" data-step="5" type="button"><span class="nt"><i class="num">2</i>Revisás la vista previa</span><span class="nd">Fila por fila, qué está bien y qué tiene error. Se corrige ahí mismo, sin volver a subir el archivo.</span></button>
-          <button class="node" data-step="6" type="button"><span class="nt"><i class="num">3</i>Confirmás y se valida</span><span class="nd">Calcula bruto, deducciones, neto y costo laboral. Bloquea si algo impide emitir y avisa variaciones raras.</span></button>
+          <button class="node" data-step="6" type="button"><span class="nt"><i class="num">3</i>Clasificás y confirmás</span><span class="nd">Clasificás lo nuevo, se calculan bruto, deducciones, neto y costo laboral, y avisa variaciones raras.</span></button>
           <button class="node" data-step="7" type="button"><span class="nt"><i class="num">4</i>Emitís los recibos</span><span class="nd">Con la fecha y el lugar de pago cargados, genera en lote un PDF Anexo III por empleado.</span></button>
         </div>
         <button class="loop" data-step="8" type="button"><span aria-hidden="true">↺</span>y el mes siguiente, más rápido</button>
@@ -327,33 +329,34 @@ h1 {
   </div>
 </div>
 
+<script src="js/recibos-demo.js?v=20261022d"></script>
 <script>
 (function () {
   var GROUPS = {"armar": "Una sola vez", "ciclo": "Cada mes", "momento": "En cualquier momento", "carga": "Cada importación"};
   var S = [
-    {"g": "armar", "t": "Empresa", "m": [["bot", "Nueva empresa: razón social, CUIT y domicilio."], ["me", "Taller Norte SRL"], ["bot", "Empresa creada ✓\nPodés subir el logo para el recibo."]], "s": [["Empresa", "Taller Norte SRL"]]},
-    {"g": "armar", "t": "Empleados", "m": [["bot", "Primera importación: 3 empleados nuevos, reconocidos por CUIL."], ["bot", "A Gómez, Ana le faltan la categoría y la fecha de ingreso."], ["me", "Administrativa · 01/03/2021"], ["bot", "Guardado ✓ La antigüedad se calcula sola."]], "s": [["Empleados", "3 activos"]]},
-    {"g": "armar", "t": "Conceptos", "m": [["bot", "Concepto sin clasificar: Sueldo básico", ["Remunerativo", "No remunerativo", "Deducción", "Contribución patronal"]], ["me", "Remunerativo"], ["bot", "Queda en el catálogo de la empresa. No se vuelve a preguntar."]], "s": [["Catálogo", "8 conceptos"]]},
-    {"g": "armar", "t": "Listo", "m": [["bot", "Listo ✓\nLa empresa ya puede emitir recibos."]], "s": []},
-    {"g": "ciclo", "t": "Importás el Excel", "m": [["me", "Importar archivo"], ["bot", "¿Qué período?"], ["me", "Octubre 2026 · liquidacion-oct.xlsx"]], "s": [["Importación oct", "previsualizada"]]},
-    {"g": "ciclo", "t": "Revisás la vista previa", "m": [["bot", "Vista previa · 18 filas\n✓ 17 válidas   ✗ 1 con error"], ["bot", "Fila 9 · Gómez, Ana\nCUIL inválido", ["Corregir fila"]], ["me", "Corregir fila"], ["bot", "✓ 18 válidas. Nada se guarda hasta confirmar."]], "s": [["Filas oct", "18 válidas"]]},
-    {"g": "ciclo", "t": "Confirmás y se valida", "m": [["me", "Confirmar importación"], ["bot", "Confirmada ✓\nBruto, deducciones, neto y costo laboral calculados por empleado."], ["bot", "⚠️ Pérez, Juan: el neto varió más de 30% contra septiembre. Avisa, no bloquea."]], "s": [["Importación oct", "confirmada"]]},
-    {"g": "ciclo", "t": "Emitís los recibos", "m": [["bot", "Faltan la fecha y el lugar de pago."], ["me", "05/11/2026 · CABA"], ["me", "Emitir recibos"], ["bot", "📄 3 recibos Anexo III emitidos ✓\nUna hoja A4 cada uno."]], "s": [["Recibos oct", "3 vigentes"]]},
-    {"g": "ciclo", "t": "El mes siguiente", "m": [["day", "Noviembre"], ["bot", "Nueva importación: los conceptos ya están clasificados. Solo queda revisar y emitir."]], "s": [["Mes en curso", "noviembre"]]},
-    {"g": "momento", "t": "¿Error en un recibo?", "m": [["me", "Anular recibo · Gómez, Ana"], ["bot", "Motivo (obligatorio)"], ["me", "Categoría mal cargada"], ["bot", "Anulado ✓", ["Reemitir"]], ["me", "Reemitir"], ["bot", "Reemitido ✓ El nuevo queda enlazado al anulado."]], "s": [["Gómez Ana oct", "reemitido"]]},
-    {"g": "momento", "t": "Historial", "m": [["me", "Historial · Gómez, Ana"], ["bot", "Oct 2026 · vigente (reemitido)\nOct 2026 · anulado: categoría mal cargada\nSep 2026 · vigente"]], "s": []},
-    {"g": "momento", "t": "Descargar", "m": [["me", "Descargar ZIP"], ["bot", "Recibo - Gómez Ana - Octubre 2026.pdf\nRecibo - Pérez Juan - Octubre 2026.pdf\nRecibo - Sosa Luis - Octubre 2026.pdf"]], "s": []},
-    {"g": "momento", "t": "Baja de empleado", "m": [["me", "Dar de baja · Sosa, Luis"], ["bot", "Inactivo ✓ Sus recibos emitidos se conservan."]], "s": [["Sosa Luis", "inactivo"]]},
-    {"g": "carga", "t": "Subís el archivo", "m": [["me", "liquidacion-nov.xlsx"]], "s": []},
-    {"g": "carga", "t": "Se revisa fila por fila", "m": [["bot", "Vista previa · 16 filas\n✓ 15 válidas   ✗ 1 con error"]], "s": []},
-    {"g": "carga", "t": "Corregís lo que haga falta", "m": [["me", "Corregir fila"], ["bot", "✓ 16 válidas"]], "s": []},
-    {"g": "carga", "t": "Confirmás", "m": [["me", "Confirmar importación"]], "s": []},
-    {"g": "carga", "t": "Recién ahí se guarda", "m": [["bot", "Importación confirmada ✓"]], "s": [["Importación nov", "confirmada"]]}
+    {"g": "armar", "t": "Empresa", "s": [["Empresa", "Distribuidora San Martín"]], "k": "empresa"},
+    {"g": "armar", "t": "Empleados", "s": [["Empleados", "2 activos"]], "k": "empleados"},
+    {"g": "armar", "t": "Conceptos", "s": [["Catálogo", "14 conceptos"]], "k": "conceptos"},
+    {"g": "armar", "t": "Listo", "s": [], "k": "listo"},
+    {"g": "ciclo", "t": "Importás el Excel", "s": [["Importación oct", "previsualizada"]], "k": "importar"},
+    {"g": "ciclo", "t": "Revisás la vista previa", "s": [["Filas oct", "error corregido"]], "k": "revisar"},
+    {"g": "ciclo", "t": "Clasificás y confirmás", "s": [["Importación oct", "confirmada"]], "k": "clasificarValidar"},
+    {"g": "ciclo", "t": "Emitís los recibos", "s": [["Recibos oct", "2 vigentes"]], "k": "emitir"},
+    {"g": "ciclo", "t": "El mes siguiente", "s": [["Mes en curso", "noviembre"]], "k": "mesSiguiente"},
+    {"g": "momento", "t": "¿Error en un recibo?", "s": [["Gómez Laura oct", "reemitido"]], "k": "anular"},
+    {"g": "momento", "t": "Historial", "s": [], "k": "historial"},
+    {"g": "momento", "t": "Descargar", "s": [], "k": "descargar"},
+    {"g": "momento", "t": "Baja de empleado", "s": [["Benítez Martín", "inactivo"]], "k": "baja"},
+    {"g": "carga", "t": "Subís el archivo", "s": [], "k": "c_subir"},
+    {"g": "carga", "t": "Se revisa fila por fila", "s": [], "k": "c_revisar"},
+    {"g": "carga", "t": "Corregís lo que haga falta", "s": [], "k": "c_corregir"},
+    {"g": "carga", "t": "Confirmás", "s": [], "k": "c_confirmar"},
+    {"g": "carga", "t": "Recién ahí se guarda", "s": [["Importación nov", "confirmada"]], "k": "c_guardado"}
   ];
   var N = S.length;
 
   var $ = function (id) { return document.getElementById(id); };
-  var chat = $('chat'), ledgerEl = $('ledger'), stage = $('stage');
+  var app = window.RecibosDemo.mount($('rdapp')), ledgerEl = $('ledger'), stage = $('stage');
   var targets = Array.prototype.slice.call(document.querySelectorAll('[data-step]'));
   var secs = Array.prototype.slice.call(document.querySelectorAll('.sec'));
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -379,24 +382,6 @@ h1 {
         setTimeout(tick, 100);
       })();
     });
-  }
-
-  function bubble(m) {
-    var el = document.createElement('div');
-    if (m[0] === 'day') { el.className = 'day'; el.textContent = m[1]; return el; }
-    el.className = 'm ' + m[0];
-    el.appendChild(document.createTextNode(m[1]));
-    if (m[2]) {
-      var b = document.createElement('div'); b.className = 'btns';
-      m[2].forEach(function (t) { var s = document.createElement('span'); s.textContent = t; b.appendChild(s); });
-      el.appendChild(b);
-    }
-    return el;
-  }
-  function add(m) { chat.appendChild(bubble(m)); chat.scrollTop = chat.scrollHeight; }
-  function typing() {
-    var t = document.createElement('div'); t.className = 'typing';
-    t.innerHTML = '<i></i><i></i><i></i>'; chat.appendChild(t); chat.scrollTop = chat.scrollHeight; return t;
   }
 
   function ledgerAt(i, flash) {
@@ -452,28 +437,16 @@ h1 {
     cur = i;
     paint(i);
     measure();
-    chat.innerHTML = '';
-    for (var j = 0; j < i; j++) {
-      if (S[j].g === S[i].g) S[j].m.forEach(add);
-    }
-    var prior = [];
+    var frames = window.RecibosDemo.steps[S[i].k];
     if (!animated) {
-      S[i].m.forEach(add);
+      app.show(frames);
       ledgerAt(i, false);
     } else {
       ledgerAt(i - 1 < 0 ? -1 : i - 1, false);
       var node = document.querySelector('[data-step="' + i + '"]');
       if (node && node.scrollIntoView && !reduce) node.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      for (var k = 0; k < S[i].m.length; k++) {
-        var m = S[i].m[k];
-        if (m[0] === 'bot') { var t = typing(); await sleep(1100); t.remove(); }
-        else if (m[0] === 'me') { await sleep(1300); }
-        else { await sleep(800); }
-        if (id !== run) return;
-        add(m);
-        // Tiempo para leer: más largo el mensaje, más espera.
-        if (m[0] !== 'day') { await sleep(1400 + m[1].length * 60); if (id !== run) return; }
-      }
+      var ok = await app.play(frames, sleep, function () { return id === run; });
+      if (!ok || id !== run) return;
       ledgerAt(i, true);
     }
     setBtn();
@@ -507,7 +480,7 @@ h1 {
     if (e.key === 'ArrowLeft') go(cur - 1);
   });
   window.addEventListener('resize', measure);
-  var phone = document.querySelector('.phone');
+  var phone = $('rdapp');
   phone.addEventListener('mouseenter', function () { hold = true; phone.classList.add('held'); });
   phone.addEventListener('mouseleave', function () { hold = false; phone.classList.remove('held'); });
 
